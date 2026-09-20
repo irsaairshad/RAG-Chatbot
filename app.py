@@ -6,114 +6,122 @@ from config import HF_MODEL, AVATAR_URL
 
 # This must be the first Streamlit command.
 st.set_page_config(
-    page_title="Multi AI Assistant",
-    page_icon="✦",
-    layout="centered",
+    page_title="Hugging Face Agent",
+    page_icon="🤖",
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
 
 # Custom CSS adds visual styling that is not available
 # through the standard Streamlit theme alone.
-# Light ChatGPT-style frontend.
 st.markdown(
     """
     <style>
-        /* Main application background */
         :root {
-            --ink: #14213d;
-            --muted-ink: #60708c;
-            --blue: #315efb;
-            --blue-dark: #2448c8;
-            --teal: #10a6a6;
-            --surface: #ffffff;
-            --surface-soft: #f2f6ff;
-            --line: #d8e2f2;
+            --bg: #07111f;
+            --bg-soft: #0d1b2a;
+            --panel: rgba(15, 23, 42, 0.78);
+            --panel-strong: rgba(17, 24, 39, 0.95);
+            --card: rgba(15, 23, 42, 0.9);
+            --line: rgba(148, 163, 184, 0.25);
+            --ink: #e2e8f0;
+            --muted: #a5b4cf;
+            --blue: #60a5fa;
+            --cyan: #22d3ee;
+            --purple: #8b5cf6;
+            --glow: rgba(96, 165, 250, 0.28);
         }
 
-        html,
-        body,
-        .stApp,
-        [data-testid="stAppViewContainer"],
-        [data-testid="stMain"],
-        [data-testid="stMainBlockContainer"],
-        section.main {
-            background: #f7f9fd !important;
+        html, body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], section.main {
+            background:
+                radial-gradient(circle at top left, rgba(96, 165, 250, 0.22), transparent 32%),
+                radial-gradient(circle at bottom right, rgba(34, 211, 238, 0.18), transparent 30%),
+                linear-gradient(135deg, var(--bg) 0%, #0b1324 100%) !important;
             color: var(--ink) !important;
         }
 
         .block-container {
-            max-width: 900px;
+            max-width: 1100px;
             padding-top: 2rem;
-            padding-bottom: 7rem;
+            padding-bottom: 6rem;
         }
 
-        /* Main heading card */
         .hero {
-            padding: 2rem;
-            margin-bottom: 1.5rem;
+            position: relative;
+            padding: 2rem 2.2rem;
+            margin-bottom: 1.6rem;
             border: 1px solid var(--line);
-            border-radius: 22px;
-            background: linear-gradient(
-                135deg,
-                #eaf0ff,
-                #ffffff 65%
-            ) !important;
-            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.06);
+            border-radius: 28px;
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.75)) !important;
+            box-shadow: 0 22px 50px rgba(15, 23, 42, 0.45);
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(139, 92, 246, 0.12));
+            pointer-events: none;
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 1;
         }
 
         .hero-badge {
-            display: inline-block;
-            padding: 0.35rem 0.75rem;
-            margin-bottom: 0.8rem;
-            color: var(--blue-dark);
-            background: #e3ebff;
-            border: 1px solid #bfd0ff;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.42rem 0.8rem;
+            margin-bottom: 0.9rem;
+            color: #dbeafe;
+            background: rgba(96, 165, 250, 0.12);
+            border: 1px solid rgba(96, 165, 250, 0.4);
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: 0.73rem;
             font-weight: 700;
-            letter-spacing: 0.08em;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
         }
 
         .hero h1 {
             margin: 0;
-            color: var(--ink) !important;
-            font-size: clamp(2rem, 5vw, 3.4rem);
-            letter-spacing: -0.05em;
+            color: #f8fbff !important;
+            font-size: clamp(2.2rem, 5vw, 4rem);
+            letter-spacing: -0.06em;
+            line-height: 1.05;
         }
 
         .hero p {
-            max-width: 650px;
-            margin: 0.7rem 0 0;
-            color: var(--muted-ink) !important;
-            font-size: 1rem;
+            max-width: 700px;
+            margin: 0.9rem 0 0;
+            color: var(--muted) !important;
+            font-size: 1.04rem;
             line-height: 1.7;
         }
 
-        /* First-message introduction */
         .empty-state {
-            padding: 1.2rem;
-            margin: 1rem 0;
-            color: var(--muted-ink) !important;
+            padding: 1.3rem 1.2rem;
+            margin: 1rem 0 1.3rem;
             text-align: center;
-            border: 1px dashed #b9c8df;
+            color: var(--muted) !important;
+            border: 1px dashed rgba(148, 163, 184, 0.4);
             border-radius: 18px;
-            background: var(--surface-soft) !important;
+            background: rgba(15, 23, 42, 0.55) !important;
         }
 
-        /* Conversation history cards */
         [data-testid="stChatMessage"] {
-            padding: 1rem;
-            margin: 0.8rem 0;
+            padding: 1.05rem 1.1rem !important;
+            margin: 0.7rem 0;
             border: 1px solid var(--line) !important;
-            border-radius: 18px;
-            background: var(--surface) !important;
+            border-radius: 20px !important;
+            background: rgba(15, 23, 42, 0.78) !important;
             color: var(--ink) !important;
-            box-shadow: 0 3px 14px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.18);
         }
 
-        /* Conversation text */
         [data-testid="stChatMessage"] p,
         [data-testid="stChatMessage"] span,
         [data-testid="stChatMessage"] li,
@@ -122,16 +130,20 @@ st.markdown(
             color: var(--ink) !important;
         }
 
-        /* Source links */
         [data-testid="stChatMessage"] a {
-            color: var(--blue-dark) !important;
+            color: #93c5fd !important;
             font-weight: 600;
         }
 
-        /* Sidebar */
+        [data-testid="stChatMessage"] pre {
+            background: rgba(15, 23, 42, 0.9) !important;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+            border-radius: 14px;
+        }
+
         [data-testid="stSidebar"] {
-            background: #edf3ff !important;
-            border-right: 1px solid var(--line) !important;
+            background: linear-gradient(180deg, rgba(4, 10, 19, 0.96), rgba(15, 23, 42, 0.94)) !important;
+            border-right: 1px solid rgba(148, 163, 184, 0.15) !important;
         }
 
         [data-testid="stSidebar"] p,
@@ -139,43 +151,68 @@ st.markdown(
         [data-testid="stSidebar"] h1,
         [data-testid="stSidebar"] h2,
         [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] h4 {
-            color: var(--ink);
+        [data-testid="stSidebar"] h4,
+        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] div {
+            color: var(--ink) !important;
         }
 
-        /* Message input */
+        [data-testid="stSidebar"] .stMetric {
+            background: rgba(96, 165, 250, 0.08);
+            border: 1px solid rgba(96, 165, 250, 0.2);
+            border-radius: 16px;
+            padding: 0.6rem 0.8rem;
+        }
+
         [data-testid="stChatInput"] {
-            background: var(--surface) !important;
-            border: 1px solid var(--blue) !important;
-            border-radius: 18px;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+            background: rgba(15, 23, 42, 0.88) !important;
+            border: 1px solid rgba(96, 165, 250, 0.6) !important;
+            border-radius: 18px !important;
+            box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.15), 0 16px 35px rgba(15, 23, 42, 0.25);
         }
 
         [data-testid="stChatInput"]:focus-within {
-            border-color: var(--teal) !important;
-            box-shadow: 0 0 0 2px rgba(16, 166, 166, 0.15);
+            border-color: rgba(34, 211, 238, 0.9) !important;
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.18);
         }
 
         [data-testid="stChatInput"] textarea {
             color: var(--ink) !important;
-            background: var(--surface) !important;
+            background: transparent !important;
         }
 
-        /* Area behind the chat input */
         [data-testid="stBottom"] {
-            background: #f7f9fd !important;
+            background: transparent !important;
         }
 
-        /* Buttons */
         .stButton > button {
-            border-color: var(--blue);
-            color: var(--blue-dark);
+            border: 1px solid rgba(96, 165, 250, 0.4);
+            background: linear-gradient(135deg, rgba(96, 165, 250, 0.18), rgba(139, 92, 246, 0.18));
+            color: #e0f2fe;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stButton > button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 18px rgba(96, 165, 250, 0.12);
+        }
+
+        .stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+            border: none !important;
+            color: white !important;
+        }
+
+        .stCodeBlock {
+            border-radius: 12px;
         }
 
         @media (max-width: 640px) {
             .hero {
-                padding: 1.3rem;
-                border-radius: 18px;
+                padding: 1.4rem 1.1rem;
+                border-radius: 20px;
             }
 
             .block-container {
@@ -210,22 +247,19 @@ initialize_chatbot()
 
 # Sidebar
 with st.sidebar:
-    st.markdown("## ✦ Multi AI")
+    st.markdown("## 🤖 Hugging Face Agent")
 
     st.caption(
-        "A modular assistant powered by Hugging Face. "
-        "Groq, Gemini, and web search can be added later."
+        "An intelligent assistant for quick answers, coding help, and web research."
     )
 
     st.divider()
 
-    st.markdown("#### Current model")
+    st.markdown("#### Active model")
     st.code(HF_MODEL, language=None)
+
     st.markdown("#### Available tools")
-    st.success(
-    "DuckDuckGo web search enabled",
-    icon="🔎",
-)
+    st.success("DuckDuckGo web search enabled", icon="🔎")
 
     st.markdown("#### Conversation")
     message_count = max(
@@ -254,12 +288,11 @@ with st.sidebar:
 st.markdown(
     """
     <section class="hero">
-        <span class="hero-badge">Hugging Face Assistant</span>
-        <h1>How can I help?</h1>
+        <span class="hero-badge">AI Assistant</span>
+        <h1>Ask anything. Build faster.</h1>
         <p>
-            Ask questions, explore ideas, write content, or get
-            help with Python. Your conversation stays available
-            during the current browser session.
+            Your smart assistant is ready to answer questions, generate ideas,
+            explain code, and search the web for the latest information.
         </p>
     </section>
     """,
